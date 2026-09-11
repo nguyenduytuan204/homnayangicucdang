@@ -1,4 +1,8 @@
-// Web Audio API Sound Synthesizer + Meme BGM "Gòi Gòi Mày Xong Gòi"
+// Web Audio API Sound Synthesizer + Meme BGM + CS:GO Unboxing Audio
+
+// Base URL helper for GitHub Pages compatibility
+const BASE_URL = import.meta.env.BASE_URL || '/';
+const getSoundUrl = (path: string) => `${BASE_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
 
 class SoundEffects {
   private ctx: AudioContext | null = null;
@@ -6,17 +10,15 @@ class SoundEffects {
   private bgmInterval: number | null = null;
   private isBgmPlaying: boolean = false;
   private memeAudio: HTMLAudioElement | null = null;
-
-  // Preloaded audio elements for instant zero-latency playback
-  private caseOpenAudio: HTMLAudioElement | null = null;
-  private scrollTickAudio: HTMLAudioElement | null = null;
+  private currentSpinAudio: HTMLAudioElement | null = null;
 
   constructor() {
+    // Preload audio on client
     if (typeof window !== 'undefined') {
-      this.caseOpenAudio = new Audio('/sounds/csgo_ui_crate_open.wav');
-      this.caseOpenAudio.preload = 'auto';
-      this.scrollTickAudio = new Audio('/sounds/csgo_scroll.wav');
-      this.scrollTickAudio.preload = 'auto';
+      try {
+        const preloadAudio = new Audio(getSoundUrl('/sounds/csgo_case_open_full.mp3'));
+        preloadAudio.preload = 'auto';
+      } catch {}
     }
   }
 
@@ -38,121 +40,61 @@ class SoundEffects {
   private getMemeAudio(): HTMLAudioElement | null {
     if (typeof window === 'undefined') return null;
     if (!this.memeAudio) {
-      this.memeAudio = new Audio('/sounds/goi_goi_may_xong_goi.mp3');
+      this.memeAudio = new Audio(getSoundUrl('/sounds/goi_goi_may_xong_goi.mp3'));
       this.memeAudio.loop = true;
       this.memeAudio.volume = 0.45;
     }
     return this.memeAudio;
   }
 
-  // CS:GO Case Open Sound (khi bấm MỞ HÒM)
-  playCSGOCaseOpen(isMuted: boolean = false) {
-    if (isMuted) return;
+  // Âm thanh quay hòm CS:GO chuẩn từ MyInstants (bao gồm tiếng mở hòm + lướt + dừng lại mở ra đồ)
+  playSpinAudio(isMuted: boolean = false): HTMLAudioElement | null {
+    if (isMuted) return null;
     try {
-      const audio = new Audio('/sounds/csgo_ui_crate_open.wav');
-      audio.volume = 0.8;
+      this.stopSpinAudio();
+
+      const audio = new Audio(getSoundUrl('/sounds/csgo_case_open_full.mp3'));
+      audio.volume = 0.85;
+      this.currentSpinAudio = audio;
       audio.play().catch(() => {
-        // Fallback synthetic case open swoosh
-        this.playSyntheticCaseOpen();
+        // Nếu trình duyệt block autoplay thì fallback nhẹ
       });
+      return audio;
     } catch {
-      this.playSyntheticCaseOpen();
+      return null;
     }
+  }
+
+  stopSpinAudio() {
+    if (this.currentSpinAudio) {
+      try {
+        this.currentSpinAudio.pause();
+        this.currentSpinAudio.currentTime = 0;
+      } catch {}
+      this.currentSpinAudio = null;
+    }
+  }
+
+  // Giữ lại để tương thích nếu component nào gọi lẻ
+  playTick(_isMuted: boolean = false) {
+    // Không cần phát tick rời để tránh bị trùng âm thanh với file âm thanh quay gốc
+  }
+
+  playCSGOCaseOpen(isMuted: boolean = false) {
+    this.playSpinAudio(isMuted);
+  }
+
+  playWin(_rarity: string = 'QUỐC DÂN', _isMuted: boolean = false) {
+    // Không cần phát âm thanh win đè lên vì file âm thanh MyInstants đã có đoạn reveal kết thúc trọn vẹn
   }
 
   // Phát tiếng meme khi mở hòm / quay
   playMemeVoice(isMuted: boolean = false) {
     if (isMuted) return;
     try {
-      const audio = new Audio('/sounds/goi_goi_may_xong_goi.mp3');
+      const audio = new Audio(getSoundUrl('/sounds/goi_goi_may_xong_goi.mp3'));
       audio.volume = 0.6;
       audio.play().catch(() => {});
-    } catch {}
-  }
-
-  // CS:GO Roulette Tick (crisp mechanical click sound as items pass)
-  playTick(isMuted: boolean = false) {
-    if (isMuted) return;
-    try {
-      const audio = new Audio('/sounds/csgo_scroll.wav');
-      audio.volume = 0.55;
-      audio.play().catch(() => {
-        this.playSyntheticTick();
-      });
-    } catch {
-      this.playSyntheticTick();
-    }
-  }
-
-  // Fallback synthetic mechanical tick
-  private playSyntheticTick() {
-    try {
-      const ctx = this.getContext();
-      if (!ctx) return;
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(1400, now);
-      osc.frequency.exponentialRampToValueAtTime(180, now + 0.025);
-
-      gain.gain.setValueAtTime(0.35, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.03);
-    } catch {}
-  }
-
-  private playSyntheticCaseOpen() {
-    try {
-      const ctx = this.getContext();
-      if (!ctx) return;
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(200, now);
-      osc.frequency.exponentialRampToValueAtTime(80, now + 0.3);
-
-      gain.gain.setValueAtTime(0.3, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.35);
-    } catch {}
-  }
-
-  // CS:GO Item Reveal / Win Sound based on Rarity (QUỐC DÂN, HIẾM, CỰC PHẨM, ĐẶC BIỆT, TỐI MẬT / GOLD KNIFE)
-  playWin(rarity: string = 'QUỐC DÂN', isMuted: boolean = false) {
-    if (isMuted) return;
-    try {
-      let soundUrl = '/sounds/item_reveal3_rare.wav';
-
-      if (rarity === 'TỐI MẬT' || rarity === 'ĐẶC BIỆT') {
-        soundUrl = '/sounds/item_reveal6_ancient.wav';
-      } else if (rarity === 'CỰC PHẨM') {
-        soundUrl = '/sounds/item_reveal5_legendary.wav';
-      } else if (rarity === 'HIẾM') {
-        soundUrl = '/sounds/item_reveal4_mythical.wav';
-      } else {
-        soundUrl = '/sounds/item_reveal3_rare.wav';
-      }
-
-      const audio = new Audio(soundUrl);
-      audio.volume = 0.85;
-      audio.play().catch(() => {
-        // Secondary fallback to itemreveal.mp3
-        const fallback = new Audio('/sounds/csgo_item_reveal.mp3');
-        fallback.volume = 0.8;
-        fallback.play().catch(() => {});
-      });
     } catch {}
   }
 
