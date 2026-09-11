@@ -1,5 +1,7 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { useState, useMemo, useCallback, useEffect, useRef, type ReactNode } from 'react';
+
+// Simple pass-through to replace AnimatePresence for debugging
+const AnimatePresence = ({ children }: { children?: ReactNode; mode?: string }) => <>{children}</>;
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import FlavorBox from './components/FlavorBox';

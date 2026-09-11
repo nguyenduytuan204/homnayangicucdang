@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   Package, LayoutGrid, Volume2, VolumeX, Music
 } from 'lucide-react';

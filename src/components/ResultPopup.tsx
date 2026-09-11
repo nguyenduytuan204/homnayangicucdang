@@ -1,5 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// framer-motion replaced with simple stubs for compatibility
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const motion: any = new Proxy({}, { get: (_, tag: string) => (props: any) => { const {initial:_i,animate:_a,exit:_e,transition:_t,whileHover:_wh,whileTap:_wt,...rest} = props; return React.createElement(tag, rest); }});
+const AnimatePresence = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
 import { X, RotateCcw, Heart, Share2, Sparkles } from 'lucide-react';
 import type { Food } from '../types';
 
