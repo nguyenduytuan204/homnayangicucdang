@@ -141,7 +141,7 @@ const FlavorBox: React.FC<FlavorBoxProps> = ({
     onOpen();
   };
 
-  const { isSpinning, stripItems, translateX, animDuration, revealIdx, spin } =
+  const { isSpinning, stripItems, translateX, revealIdx, spin } =
     useRoulette({ items: displayFoods, isMuted, onComplete: handleComplete });
 
   const handleSpin = () => {
@@ -228,9 +228,6 @@ const FlavorBox: React.FC<FlavorBoxProps> = ({
                   display: 'flex',
                   gap: `${CARD_GAP}px`,
                   transform: `translateX(${translateX}px)`,
-                  transition: animDuration > 0
-                    ? `transform ${animDuration}ms cubic-bezier(0.09, 0.80, 0.15, 1.00)`
-                    : 'none',
                   willChange: 'transform',
                   position: 'absolute',
                   top: '50%',

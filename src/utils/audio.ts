@@ -1,6 +1,5 @@
-// Web Audio API Sound Synthesizer + Meme BGM + CS:GO Unboxing Audio
+// Web Audio API Sound Synthesizer + Meme BGM + Precision CS:GO Unboxing Engine
 
-// Base URL helper for GitHub Pages compatibility
 const BASE_URL = import.meta.env.BASE_URL || '/';
 const getSoundUrl = (path: string) => `${BASE_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
 
@@ -10,14 +9,26 @@ class SoundEffects {
   private bgmInterval: number | null = null;
   private isBgmPlaying: boolean = false;
   private memeAudio: HTMLAudioElement | null = null;
-  private currentSpinAudio: HTMLAudioElement | null = null;
+
+  // Cached audio buffers / elements
+  private crateOpenAudio: HTMLAudioElement | null = null;
+  private tickPool: HTMLAudioElement[] = [];
+  private tickPoolIdx = 0;
 
   constructor() {
-    // Preload audio on client
     if (typeof window !== 'undefined') {
       try {
-        const preloadAudio = new Audio(getSoundUrl('/sounds/csgo_case_open_full.mp3'));
-        preloadAudio.preload = 'auto';
+        // Crate open click sound
+        this.crateOpenAudio = new Audio(getSoundUrl('/sounds/csgo_ui_crate_open.wav'));
+        this.crateOpenAudio.preload = 'auto';
+
+        // Preload pool of 10 tick audio elements for rapid playback
+        for (let i = 0; i < 10; i++) {
+          const a = new Audio(getSoundUrl('/sounds/csgo_scroll.wav'));
+          a.preload = 'auto';
+          a.volume = 0.55;
+          this.tickPool.push(a);
+        }
       } catch {}
     }
   }
@@ -36,7 +47,66 @@ class SoundEffects {
     return this.ctx;
   }
 
-  // Khởi tạo file âm thanh meme "Gòi gòi mày xong gòi"
+  // 1. Tiếng mở hòm ban đầu (khi nhấn MỞ HÒM)
+  playCrateOpen(isMuted: boolean = false) {
+    if (isMuted) return;
+    try {
+      if (this.crateOpenAudio) {
+        this.crateOpenAudio.currentTime = 0;
+        this.crateOpenAudio.volume = 0.8;
+        this.crateOpenAudio.play().catch(() => {});
+      } else {
+        const a = new Audio(getSoundUrl('/sounds/csgo_ui_crate_open.wav'));
+        a.volume = 0.8;
+        a.play().catch(() => {});
+      }
+    } catch {}
+  }
+
+  // 2. Tiếng lách cách cơ học khi mỗi món đồ lướt qua kim giữa (tương tác chính xác 1:1 với vị trí)
+  playTick(isMuted: boolean = false) {
+    if (isMuted) return;
+    try {
+      if (this.tickPool.length > 0) {
+        const audio = this.tickPool[this.tickPoolIdx];
+        this.tickPoolIdx = (this.tickPoolIdx + 1) % this.tickPool.length;
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      } else {
+        const a = new Audio(getSoundUrl('/sounds/csgo_scroll.wav'));
+        a.volume = 0.55;
+        a.play().catch(() => {});
+      }
+    } catch {}
+  }
+
+  // 3. Tiếng chúc mừng khi dừng trúng vật phẩm tương ứng với độ hiếm (Rare, Mythical, Legendary, Ancient/Gold)
+  playWin(rarity: string = 'QUỐC DÂN', isMuted: boolean = false) {
+    if (isMuted) return;
+    try {
+      let soundUrl = '/sounds/item_reveal3_rare.wav';
+
+      if (rarity === 'TỐI MẬT' || rarity === 'ĐẶC BIỆT') {
+        soundUrl = '/sounds/item_reveal6_ancient.wav';
+      } else if (rarity === 'CỰC PHẨM') {
+        soundUrl = '/sounds/item_reveal5_legendary.wav';
+      } else if (rarity === 'HIẾM') {
+        soundUrl = '/sounds/item_reveal4_mythical.wav';
+      } else {
+        soundUrl = '/sounds/item_reveal3_rare.wav';
+      }
+
+      const audio = new Audio(getSoundUrl(soundUrl));
+      audio.volume = 0.85;
+      audio.play().catch(() => {
+        const fallback = new Audio(getSoundUrl('/sounds/csgo_item_reveal.mp3'));
+        fallback.volume = 0.8;
+        fallback.play().catch(() => {});
+      });
+    } catch {}
+  }
+
+  // BGM meme "Gòi gòi mày xong gòi"
   private getMemeAudio(): HTMLAudioElement | null {
     if (typeof window === 'undefined') return null;
     if (!this.memeAudio) {
@@ -47,60 +117,6 @@ class SoundEffects {
     return this.memeAudio;
   }
 
-  // Âm thanh quay hòm CS:GO chuẩn từ MyInstants (bao gồm tiếng mở hòm + lướt + dừng lại mở ra đồ)
-  playSpinAudio(isMuted: boolean = false): HTMLAudioElement | null {
-    if (isMuted) return null;
-    try {
-      this.stopSpinAudio();
-
-      const audio = new Audio(getSoundUrl('/sounds/csgo_case_open_full.mp3'));
-      audio.volume = 0.85;
-      this.currentSpinAudio = audio;
-      audio.play().catch(() => {
-        // Nếu trình duyệt block autoplay thì fallback nhẹ
-      });
-      return audio;
-    } catch {
-      return null;
-    }
-  }
-
-  stopSpinAudio() {
-    if (this.currentSpinAudio) {
-      try {
-        this.currentSpinAudio.pause();
-        this.currentSpinAudio.currentTime = 0;
-      } catch {}
-      this.currentSpinAudio = null;
-    }
-  }
-
-  // Giữ lại để tương thích nếu component nào gọi lẻ
-  playTick(_isMuted: boolean = false) {
-    // Không cần phát tick rời để tránh bị trùng âm thanh với file âm thanh quay gốc
-  }
-
-  playCSGOCaseOpen(isMuted: boolean = false) {
-    this.playSpinAudio(isMuted);
-  }
-
-  playWin(_rarity: string = 'QUỐC DÂN', _isMuted: boolean = false) {
-    // Không cần phát âm thanh win đè lên vì file âm thanh MyInstants đã có đoạn reveal kết thúc trọn vẹn
-  }
-
-  // Phát tiếng meme khi mở hòm / quay
-  playMemeVoice(isMuted: boolean = false) {
-    if (isMuted) return;
-    try {
-      const audio = new Audio(getSoundUrl('/sounds/goi_goi_may_xong_goi.mp3'));
-      audio.volume = 0.6;
-      audio.play().catch(() => {});
-    } catch {}
-  }
-
-  // ----------------------------------------------------
-  // Nhạc nền BGM: "Gòi Gòi Mày Xong Gòi" Meme + Ambient Synth
-  // ----------------------------------------------------
   toggleBGM(isMuted: boolean): boolean {
     if (this.isBgmPlaying || !isMuted) {
       this.stopBGM();
@@ -114,15 +130,12 @@ class SoundEffects {
   startBGM() {
     try {
       this.isBgmPlaying = true;
-
-      // 1. Phát nhạc meme "Gòi gòi mày xong gòi"
       const meme = this.getMemeAudio();
       if (meme) {
         meme.currentTime = 0;
         meme.play().catch(() => {});
       }
 
-      // 2. Phát thêm nền synth ambient nhẹ
       const ctx = this.getContext();
       if (!ctx) return;
 
@@ -131,12 +144,11 @@ class SoundEffects {
       this.bgmGain.connect(ctx.destination);
 
       const chordFrequencies = [
-        [130.81, 155.56, 196.00], // C3, Eb3, G3
-        [116.54, 155.56, 174.61], // Bb2, Eb3, F3
+        [130.81, 155.56, 196.00],
+        [116.54, 155.56, 174.61],
       ];
 
       let chordIdx = 0;
-
       const playChordCycle = () => {
         if (!this.isBgmPlaying || !this.bgmGain || !this.ctx) return;
 
@@ -175,14 +187,10 @@ class SoundEffects {
 
   stopBGM() {
     this.isBgmPlaying = false;
-
-    // Dừng nhạc meme
     if (this.memeAudio) {
       this.memeAudio.pause();
       this.memeAudio.currentTime = 0;
     }
-
-    // Dừng synth
     if (this.bgmInterval !== null) {
       clearInterval(this.bgmInterval);
       this.bgmInterval = null;
