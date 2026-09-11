@@ -1,0 +1,271 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #060b14;
+    color: #e2e8f0;
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #060b14;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1e3a5f;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2563ab;
+  }
+
+  ::selection {
+    background: rgba(168, 85, 247, 0.3);
+    color: #e2e8f0;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply relative px-6 py-2.5 font-semibold text-sm tracking-wider uppercase
+           bg-gradient-to-r from-accent-purple-dim to-accent-purple
+           border border-accent-purple/40 rounded
+           text-white shadow-glow-purple
+           transition-all duration-300 ease-out
+           hover:from-accent-purple hover:to-accent-purple-glow
+           hover:shadow-glow-purple hover:scale-105
+           active:scale-95 overflow-hidden;
+  }
+
+  .btn-gold {
+    @apply relative px-6 py-2.5 font-bold text-sm tracking-widest uppercase
+           bg-gradient-to-r from-yellow-700 to-accent-gold
+           border border-accent-gold/50 rounded
+           text-white shadow-glow-gold animate-pulse-gold
+           transition-all duration-300 ease-out
+           hover:from-accent-gold hover:to-accent-gold-bright
+           hover:shadow-glow-gold hover:scale-105
+           active:scale-95 overflow-hidden;
+  }
+
+  .btn-outline {
+    @apply px-4 py-2 text-sm font-medium tracking-wide
+           border border-border-glow rounded
+           text-text-secondary bg-transparent
+           transition-all duration-200
+           hover:border-accent-purple/60 hover:text-accent-purple hover:bg-accent-purple/5
+           active:scale-95;
+  }
+
+  .panel {
+    @apply bg-bg-panel border border-border-dim rounded-lg
+           shadow-panel backdrop-blur-sm;
+  }
+
+  .panel-glow {
+    @apply panel border-accent-gold/30 shadow-glow-gold;
+  }
+
+  .input-field {
+    @apply bg-bg-card border border-border-dim rounded
+           px-4 py-2.5 text-sm text-text-primary
+           placeholder:text-text-muted
+           focus:outline-none focus:border-accent-purple/60 focus:ring-1 focus:ring-accent-purple/30
+           transition-all duration-200;
+  }
+
+  .tag {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium;
+  }
+
+  .rarity-badge {
+    @apply tag font-bold tracking-widest uppercase;
+  }
+
+  .rarity-common {
+    @apply bg-rarity-common/15 text-rarity-common border border-rarity-common/30;
+  }
+
+  .rarity-rare {
+    @apply bg-rarity-rare/15 text-rarity-rare border border-rarity-rare/30;
+  }
+
+  .rarity-epic {
+    @apply bg-rarity-epic/15 text-rarity-epic border border-rarity-epic/30;
+  }
+
+  .rarity-secret {
+    @apply bg-rarity-secret/15 text-rarity-secret border border-rarity-secret/30 animate-glow-pulse;
+  }
+
+  .grid-bg {
+    background-image: linear-gradient(rgba(30,58,95,0.12) 1px, transparent 1px), 
+                      linear-gradient(90deg, rgba(30,58,95,0.12) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-accent-gold via-accent-gold-bright to-accent-gold-glow bg-clip-text text-transparent;
+  }
+
+  .text-gradient-purple {
+    @apply bg-gradient-to-r from-accent-purple-dim via-accent-purple to-accent-purple-glow bg-clip-text text-transparent;
+  }
+
+  .text-gradient-cyber {
+    @apply bg-gradient-to-r from-accent-cyan via-accent-purple to-accent-gold bg-clip-text text-transparent;
+  }
+
+  .scanline-effect {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scanline-effect::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.1), transparent);
+    animation: scanline 6s linear infinite;
+    pointer-events: none;
+  }
+
+  .card-food {
+    @apply relative bg-bg-card border border-border-dim rounded-lg overflow-hidden cursor-pointer
+           transition-all duration-300 ease-out
+           hover:border-accent-gold/50 hover:shadow-glow-gold hover:-translate-y-1;
+  }
+
+  .card-food.active {
+    @apply border-accent-gold shadow-glow-gold scale-105;
+  }
+
+  .carousel-wrapper {
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+
+  .carousel-item {
+    scroll-snap-align: center;
+  }
+
+  .tab-button {
+    @apply relative px-6 py-3 text-sm font-semibold tracking-wide uppercase
+           transition-all duration-200 rounded-t;
+  }
+
+  .tab-button.active {
+    @apply text-accent-gold bg-bg-panel border border-border-dim border-b-transparent;
+  }
+
+  .tab-button:not(.active) {
+    @apply text-text-secondary hover:text-text-primary;
+  }
+
+  .neon-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(168,85,247,0.6), rgba(245,158,11,0.6), transparent);
+  }
+
+  .progress-bar {
+    @apply h-1 rounded-full w-full overflow-hidden;
+    background: rgba(255,255,255,0.06);
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-1000;
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4
+           bg-black/70 backdrop-blur-md;
+  }
+
+  .number-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .writing-vertical {
+    writing-mode: vertical-rl;
+  }
+
+  .clip-hex {
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  }
+}
+
+/* Roulette spin animation */
+@keyframes rouletteScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.roulette-spinning {
+  animation: rouletteScroll 0.4s linear infinite;
+}
+
+/* Particle effects */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: particleFloat 3s ease-in-out infinite;
+}
+
+@keyframes particleFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+  50% { transform: translateY(-20px) rotate(180deg); opacity: 0.3; }
+}
+
+/* Corner decorations */
+.corner-tl::before,
+.corner-br::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: rgba(245, 158, 11, 0.6);
+  border-style: solid;
+}
+
+.corner-tl::before {
+  top: 0; left: 0;
+  border-width: 2px 0 0 2px;
+}
+
+.corner-br::after {
+  bottom: 0; right: 0;
+  border-width: 0 2px 2px 0;
+}
