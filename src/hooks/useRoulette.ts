@@ -1,6 +1,15 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import type { Food } from '../types';
 import { soundEffects } from '../utils/audio';
+
+// Card dimensions exported so FlavorBox can use them
+export const CARD_W = 150;
+export const CARD_GAP = 5;
+export const CARD_STEP = CARD_W + CARD_GAP;
+
+const STRIP_LEN = 64;       // total items in strip
+const WINNER_IDX = 50;      // winner lands here (near end of strip)
+const PREVIEW_ANCHOR = 6;   // which item appears at center during preview
 
 interface UseRouletteOptions {
   items: Food[];
@@ -8,67 +17,115 @@ interface UseRouletteOptions {
   onComplete: (food: Food) => void;
 }
 
+function buildStrip(items: Food[], winnerIdx: number): { strip: Food[]; winner: Food } {
+  const winner = items[Math.floor(Math.random() * items.length)];
+  const strip: Food[] = Array.from({ length: STRIP_LEN }, () =>
+    items[Math.floor(Math.random() * items.length)]
+  );
+  strip[winnerIdx] = winner;
+  return { strip, winner };
+}
+
 export function useRoulette({ items, isMuted = false, onComplete }: UseRouletteOptions) {
   const [isSpinning, setIsSpinning] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedFood, setSelectedFood] = useState<Food | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [stripItems, setStripItems] = useState<Food[]>([]);
+  const [translateX, setTranslateX] = useState(0);
+  const [animDuration, setAnimDuration] = useState(0);
+  const [revealIdx, setRevealIdx] = useState<number | null>(null);
+  const isSpinningRef = useRef(false);
+  const containerWidthRef = useRef(800);
 
-  const spin = useCallback(() => {
-    if (isSpinning || items.length === 0) return;
+  // Init preview strip on mount / when items change
+  useEffect(() => {
+    if (items.length === 0 || isSpinningRef.current) return;
+    const { strip } = buildStrip(items, PREVIEW_ANCHOR);
+    setStripItems(strip);
+    // Position so PREVIEW_ANCHOR item is at center of 800px estimate
+    // will be refined on actual spin
+    setTranslateX(400 - PREVIEW_ANCHOR * CARD_STEP - CARD_W / 2);
+    setAnimDuration(0);
+  }, [items]);
 
-    setIsSpinning(true);
-    setSelectedFood(null);
+  const spin = useCallback((containerWidth: number) => {
+    if (isSpinningRef.current || items.length === 0) return;
 
-    // Phát âm thanh mở hòm CS:GO chuẩn
+    containerWidthRef.current = containerWidth;
+    const cw = containerWidth;
+
     soundEffects.playCSGOCaseOpen(isMuted);
 
-    const totalDuration = 2800 + Math.random() * 1200;
-    const finalIndex = Math.floor(Math.random() * items.length);
+    const { strip, winner } = buildStrip(items, WINNER_IDX);
+    setStripItems(strip);
+    setRevealIdx(null);
 
-    let speed = 60;
-    let idx = 0;
-    let elapsed = 0;
+    // Start position: PREVIEW_ANCHOR at center
+    const startX = cw / 2 - PREVIEW_ANCHOR * CARD_STEP - CARD_W / 2;
+    // End position: WINNER_IDX at center (with small random offset for realism)
+    const randomOffset = (Math.random() - 0.5) * (CARD_W * 0.4);
+    const targetX = cw / 2 - WINNER_IDX * CARD_STEP - CARD_W / 2 + randomOffset;
 
-    const tick = () => {
-      idx = (idx + 1) % items.length;
-      setCurrentIndex(idx);
-      elapsed += speed;
+    const totalDur = 6800 + Math.random() * 1800; // 6.8s – 8.6s
 
-      // Play CS:GO tick sound on every item step
-      soundEffects.playTick(isMuted);
+    // Step 1: reset position without animation
+    setAnimDuration(0);
+    setTranslateX(startX);
+    isSpinningRef.current = true;
+    setIsSpinning(true);
 
-      // Gradually slow down
-      if (elapsed > totalDuration * 0.5) {
-        speed = Math.min(speed * 1.12, 450);
-      }
+    // Step 2: two rAF frames to flush the reset, then start animation
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setAnimDuration(totalDur);
+        setTranslateX(targetX);
 
-      if (elapsed >= totalDuration) {
-        if (intervalRef.current) clearTimeout(intervalRef.current);
-        setCurrentIndex(finalIndex);
-        setIsSpinning(false);
-        setSelectedFood(items[finalIndex]);
+        // --- Tick tracking (approximating CSS ease-out cubic) ---
+        const startTime = performance.now();
+        let lastTickIdx = -1;
 
-        // Play CS:GO reveal fanfare chime based on Rarity!
-        soundEffects.playWin(items[finalIndex].rarity, isMuted);
+        const trackTicks = (now: number) => {
+          if (!isSpinningRef.current) return;
+          const elapsed = now - startTime;
+          const t = Math.min(elapsed / totalDur, 1);
 
-        timeoutRef.current = setTimeout(() => {
-          onComplete(items[finalIndex]);
-        }, 400);
-      } else {
-        intervalRef.current = setTimeout(tick, speed);
-      }
-    };
+          // Approximate CSS cubic-bezier(0.09, 0.80, 0.15, 1.00) with ease-out cubic
+          const eased = 1 - Math.pow(1 - t, 3);
+          const curX = startX + (targetX - startX) * eased;
 
-    intervalRef.current = setTimeout(tick, speed);
-  }, [isSpinning, items, isMuted, onComplete]);
+          // Which item index is currently at center?
+          const centerIdx = Math.round((cw / 2 - curX - CARD_W / 2) / CARD_STEP);
 
-  const stop = useCallback(() => {
-    if (intervalRef.current) clearTimeout(intervalRef.current);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setIsSpinning(false);
-  }, []);
+          if (centerIdx !== lastTickIdx && centerIdx >= 0 && centerIdx < STRIP_LEN) {
+            lastTickIdx = centerIdx;
+            soundEffects.playTick(isMuted);
+          }
 
-  return { isSpinning, currentIndex, selectedFood, spin, stop };
+          if (t < 0.999) {
+            requestAnimationFrame(trackTicks);
+          }
+        };
+        requestAnimationFrame(trackTicks);
+
+        // Step 3: after animation ends, reveal winner
+        const endTimer = setTimeout(() => {
+          isSpinningRef.current = false;
+          setIsSpinning(false);
+          setRevealIdx(WINNER_IDX);
+          soundEffects.playWin(winner.rarity, isMuted);
+          setTimeout(() => onComplete(winner), 800);
+        }, totalDur + 80);
+
+        // Cleanup guard
+        return () => clearTimeout(endTimer);
+      });
+    });
+  }, [items, isMuted, onComplete]);
+
+  return {
+    isSpinning,
+    stripItems,
+    translateX,
+    animDuration,
+    revealIdx,
+    spin,
+  };
 }
